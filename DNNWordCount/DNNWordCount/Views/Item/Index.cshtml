@@ -1,0 +1,143 @@
+﻿@inherits DotNetNuke.Web.Mvc.Framework.DnnWebViewPage<IEnumerable<DNN.ModuleDNNWordCount.Models.Item>>
+@using System.Text.RegularExpressions
+@using DotNetNuke.Web.Mvc.Helpers
+
+<style>
+    div.padded {
+        padding-top: 0.25in;
+        padding-right: 0.25in;
+        padding-bottom: 0.25in;
+        padding-left: 0.25in;
+    }
+</style>
+
+<script src="http://code.angularjs.org/1.4.8/angular.js"></script>
+
+<div class="padded" ng-app='myApp' ng-controller='myController'>
+    <input type="text" style="width: 500px" class="form-control" placeholder="Enter URL to Search " ng-model="searchURL">
+    <br>
+    <br>
+    <input type="button" value="Search" ng-click="CalculateWordCount()" class="btn btn-primary" />
+    <br>
+    <br>
+    Total words are : <div ng-show="results">{{results}}</div>
+    <br>
+    <br>
+    Historical Results
+    <br>
+    <table class="table-striped">
+        <tr>
+            <th style="width: 200px">Date</th>
+            <th style="width: 500px">URL</th>
+            <th>Word Count</th>
+            <th></th>
+        </tr>
+        <tr ng-repeat="search in searches">
+            <td>{{search.date}}</td>
+            <td>{{search.url}}</td>
+            <td>{{search.count}}</td>
+        </tr>
+    </table>
+</div>
+
+<script>
+    var app = angular.module('myApp', []);
+    app.config(['$httpProvider', function ($httpProvider) {
+        $httpProvider.defaults.useXDomain = true;
+        delete $httpProvider.defaults.headers.common['X-Requested-With'];
+    }]);
+
+    app.factory('SearchService', ['$http', function ($http) {
+        var baseUrl = "http://localhost:8070/DesktopModules/DNNWordCount/API/Search/";
+        var dataFactory = {};
+
+        dataFactory.getSearches = function () {
+            return $http.get(baseUrl + 'GetAll/' + '?_=' + new Date().getTime());
+        };
+
+        dataFactory.addToHistory = function (result) {
+            return $http.post(baseUrl + 'Add/', result);
+        };
+
+        return dataFactory;
+    }]);
+
+    app.factory('CalculationService', ['$http' , function ($http) {
+        var calculationBaseUrl = "http://localhost:8070/DesktopModules/DNNWordCount/API/Calculation/";
+        var calculationFactory = {};
+
+        calculationFactory.getWordCount = function (searchURL) {
+            return $http.get(calculationBaseUrl + 'Get/' + '?url=' + encodeURIComponent(searchURL));
+        };
+
+        return calculationFactory;
+
+    }]);
+
+    app.controller('myController', function ($scope, SearchService, CalculationService, $http) {
+        $scope.searches = [];
+
+        $scope.RefreshHistory = function () {
+
+            try {
+                SearchService.getSearches().then(function (searchHistory) {
+                    console.log('Refreshing');
+                    $scope.searches = searchHistory.data;
+                    console.log('Completed Refresh of Search History.');
+                });
+            }
+            catch (err)
+            {
+                console.log('While refreshing' + err);
+            }
+        }
+
+        $scope.CalculateWordCount = function () {
+            console.log('Calling calculation service');
+
+            CalculationService.getWordCount($scope.searchURL).then(function (calculationResponse) {
+                $scope.results = calculationResponse.data;
+
+                console.log('Received : ' + JSON.stringify(calculationResponse));
+            });
+
+            console.log('returned : ' + $scope.results);
+
+            //Alternate Count for debugging
+            /*$http.get($scope.searchURL)
+                .then(function (response) {                    
+                    try
+                    {
+                        parser = new DOMParser();
+                        var data = response.data;
+                        var htmlDoc = parser.parseFromString(data, "text/html");
+
+                        var bodySection = htmlDoc.getElementsByTagName("body");
+                        var text = bodySection[0].innerText;
+                        var jsWordCount = text.split(/\s+/).length;
+                        console.log('alternate : ' + jsWordCount);
+                    }
+                    catch(err)
+                    {
+                        console.log(err);
+                    }                    
+                });*/
+
+                var currentResult = { 'date': new Date(), 'url': $scope.searchURL, 'count': $scope.results };
+                $scope.searches.push(currentResult);
+
+                try {
+                    SearchService.addToHistory(currentResult);
+                    console.log("Saved search result to history");
+                }
+                catch (err) {
+                    console.log('While refreshing: ' + err);
+                }
+            
+            $scope.RefreshHistory();
+        }
+
+        $scope.RefreshHistory();
+    });
+
+</script>
