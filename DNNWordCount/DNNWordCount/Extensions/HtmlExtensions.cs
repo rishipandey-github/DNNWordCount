@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace DNN.ModuleDNNWordCount.Extensions
@@ -25,12 +26,18 @@ namespace DNN.ModuleDNNWordCount.Extensions
                 {
                     if (item.InnerText.Length > 0)
                     {
-                        total += item.InnerText.Split(' ').Count();
+                        var stringValue = RemoveSpecialCharacters(item.InnerText);
+                        total += stringValue.Split(' ').Count();
                     }
                 }
             }
 
             return total.ToString();
+        }
+
+        private static string RemoveSpecialCharacters(string str)
+        {
+            return Regex.Replace(str, "[^a-zA-Z0-9_.]+", "", RegexOptions.Compiled);
         }
 
         public static string GetResponseString(string encodedUrl)
