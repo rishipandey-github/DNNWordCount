@@ -16,10 +16,7 @@ namespace DNN.ModuleDNNWordCount.Services
             "DNNWordCount",
             "default",
             "{controller}/{action}",
-            new string[] { "DNN.ModuleDNNWordCount.Services" });
-
-            GlobalConfiguration.Configuration.Formatters.Clear();
-            GlobalConfiguration.Configuration.Formatters.Add(new JsonMediaTypeFormatter());
+            new string[] { "DNN.ModuleDNNWordCount.Services" });            
         }
     }
 }

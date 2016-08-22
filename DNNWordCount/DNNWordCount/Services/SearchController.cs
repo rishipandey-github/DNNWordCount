@@ -33,7 +33,7 @@ namespace DNN.ModuleDNNWordCount.Services
         {
             try
             {               
-                _searchRepository.Add(data);
+                _searchRepository.Add(data);                
                 return Request.CreateResponse(HttpStatusCode.OK, "Completed");
             }
             catch (System.Exception ex)

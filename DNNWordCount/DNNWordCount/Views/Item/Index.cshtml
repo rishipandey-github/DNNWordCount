@@ -48,22 +48,22 @@
     }]);
 
     app.factory('SearchService', ['$http', function ($http) {
-        var baseUrl = "http://localhost:8070/DesktopModules/DNNWordCount/API/Search/";
+        var baseUrl = "/DesktopModules/DNNWordCount/API/Search/";
         var dataFactory = {};
 
         dataFactory.getSearches = function () {
-            return $http.get(baseUrl + 'GetAll/' + '?_=' + new Date().getTime());
+            return $http.get(baseUrl + 'GetAll' + '?_=' + new Date().getTime());
         };
 
         dataFactory.addToHistory = function (result) {
-            return $http.post(baseUrl + 'Add/', result);
+            return $http.post(baseUrl + 'Add', result);
         };
 
         return dataFactory;
     }]);
 
-    app.factory('CalculationService', ['$http' , function ($http) {
-        var calculationBaseUrl = "http://localhost:8070/DesktopModules/DNNWordCount/API/Calculation/";
+    app.factory('CalculationService', ['$http', function ($http) {
+        var calculationBaseUrl = "/DesktopModules/DNNWordCount/API/Calculation/";
         var calculationFactory = {};
 
         calculationFactory.getWordCount = function (searchURL) {
@@ -78,34 +78,43 @@
         $scope.searches = [];
 
         $scope.RefreshHistory = function () {
-
+            console.log('Calling Refresh');
             try {
                 SearchService.getSearches().then(function (searchHistory) {
-                    console.log('Refreshing');
                     $scope.searches = searchHistory.data;
-                    console.log('Completed Refresh of Search History.');
                 });
             }
-            catch (err)
-            {
+            catch (err) {
                 console.log('While refreshing' + err);
             }
         }
 
         $scope.CalculateWordCount = function () {
-            console.log('Calling calculation service');
 
             CalculationService.getWordCount($scope.searchURL).then(function (calculationResponse) {
                 $scope.results = calculationResponse.data;
 
-                console.log('Received : ' + JSON.stringify(calculationResponse));
-            });
+                console.log('Received from calculation service: ' + $scope.results);
+                var currentResult = { 'date': new Date(), 'url': $scope.searchURL, 'count': $scope.results };
+                console.log('current result: ' + currentResult);
 
-            console.log('returned : ' + $scope.results);
+                //$scope.searches.push(currentResult);
+
+                try {
+                    SearchService.addToHistory(currentResult).then(function () {
+                        $scope.RefreshHistory();
+                    });
+                    console.log("Saved search result to history");
+                }
+                catch (err) {
+                    console.log('While adding: ' + err);
+                }
+
+            });
 
             //Alternate Count for debugging
             /*$http.get($scope.searchURL)
-                .then(function (response) {                    
+                .then(function (response) {
                     try
                     {
                         parser = new DOMParser();
@@ -120,21 +129,8 @@
                     catch(err)
                     {
                         console.log(err);
-                    }                    
+                    }
                 });*/
-
-                var currentResult = { 'date': new Date(), 'url': $scope.searchURL, 'count': $scope.results };
-                $scope.searches.push(currentResult);
-
-                try {
-                    SearchService.addToHistory(currentResult);
-                    console.log("Saved search result to history");
-                }
-                catch (err) {
-                    console.log('While refreshing: ' + err);
-                }
-            
-            $scope.RefreshHistory();
         }
 
         $scope.RefreshHistory();
